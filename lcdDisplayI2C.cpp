@@ -11,7 +11,10 @@ static const int ASCII_NINE = ASCII_ZERO+9;
 
 String menuLines[6] = {"Set Big Int", "Nxt Strt Time", "Set Small Int", "# of Times", "Set Open Time", "DISABLE"};
 // default Settigs
-String defaultSettings[5] = {"00:00:10", "00:00:10", "00:00:05", "00", "00:00:02"};
+// constraints:
+// 1. big int >= # of Times * small int
+// 2. small int >= open time
+String defaultSettings[5] = {"00:00:30", "00:00:10", "00:00:05", "04", "00:00:02"};
 const int CURSOR_ROWMIN = 0;
 const int CURSOR_ROWMAX = 5;
 
@@ -115,15 +118,38 @@ void lcdDisplayI2C::show_main_page() {
       waitTime = _timeSettingsInNum[1];
     }
     
+    // activate solenoid valve
     if ((unsigned long)(currentMillis - previousMillis) >= waitTime) {
-      // activate valve for 5 seconds (TODO: make activation customizable)
-      Serial.println("TURN ON");
-      digitalWrite(_activationPin, HIGH);
-      delay(2000);
-      digitalWrite(_activationPin, LOW);
-
-      inPeriod = true;
+      Serial.println("ACTIVATE");
       previousMillis = currentMillis;
+
+      unsigned long innerCurrentMillis = millis();
+      unsigned long innerPreviousMillis = 0;
+      unsigned long period = _timeSettingsInNum[2];
+      unsigned long numOfTimes = _timeSettingsInNum[3];
+      unsigned long duration = _timeSettingsInNum[4];
+
+      
+
+      int counta = 0;
+      while (counta < numOfTimes) {
+        innerCurrentMillis = millis();
+        if ((unsigned long) (innerCurrentMillis - innerPreviousMillis) >= period) {
+            // activate valve for 5 seconds (TODO: make activation customizable)
+          Serial.println("TURN ON");
+          Serial.println(innerPreviousMillis);
+          Serial.println(innerCurrentMillis);
+
+
+          innerPreviousMillis = innerCurrentMillis;
+          digitalWrite(_activationPin, HIGH);
+          Serial.println(duration);
+          delay(2000);
+          digitalWrite(_activationPin, LOW);
+          counta++;
+        }
+      }
+      inPeriod = true;
     }
   }
 }
@@ -211,9 +237,9 @@ void lcdDisplayI2C::update_time_settings() {
   for (int i = 0; i < (sizeof(_timeSettingsInNum)/sizeof(*_timeSettingsInNum)); i++) {
       if (i == 3) {
         _timeSettingsInNum[i] = _timeSettings[i].toInt();
-        return;
+        continue;
       }
-    _timeSettingsInNum[i] = get_millis(_timeSettings[i]);
+      _timeSettingsInNum[i] = get_millis(_timeSettings[i]);
   }
   // interval = get_millis(_bigInterval);
   // nextStartTimeFromNow = lcdDisplayI2C::get_millis(_nextStartTime);
@@ -270,48 +296,9 @@ void lcdDisplayI2C::move_cursor(const int col, const int row) {
   _lcd_i2c.setCursor(col, row);
 }
 
-// String lcdDisplayI2C::time_to_string(int lineNum) {
-//   return time_to_string(timeDigits[lineNum]._val, timeDigits[lineNum+1]._val, timeDigits[lineNum+2]._val);
-// }
-
-// String lcdDisplayI2C::time_to_string(const String hour, const String min, const String sec) {
-//   return hour + ':' + min + ':' + sec;
-// }
-
 String lcdDisplayI2C::zero_pad(const int time_val) {
   if (time_val < 10)
     return "0" + String(time_val);
   return String(time_val);
 }
 
-// void lcdDisplayI2C::init_time_digits() {
-//   for (int i = 0; i < 6; i++) {
-//     timeDigits[i]._val = 0;
-//     timeDigits[i]._name = _timeDigitNames[i];
-//   }
-// }
-
-// String lcdDisplay::display_time_string(timeDigit* time) {
-//   return sprintf("%4d:%2d:%2d", time[0]._val, time[1]._val, time[2]._val)
-// }
-
-// lcdDisplay::~lcdDisplay() {
-//   delete[] displayDigits;
-// }
-
-// lcdDisplay::displayDigit::displayDigit(const int val, const String name) {
-//   setVal(val);
-//   _name = name;
-// }
-
-// void lcdDisplay::displayDigit::getVal() {
-//   return _val;
-// }
-
-// void lcdDisplay::displayDigit::setVal(const int val) {
-//   _val = val;
-// }
-
-// void lcdDisplay::displayDigit::name() {
-//   return _name;
-// }
