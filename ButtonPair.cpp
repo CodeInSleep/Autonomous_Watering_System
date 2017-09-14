@@ -1,19 +1,20 @@
 #include "ButtonPair.h"
 #include "Button.h"
 
-ButtonPair::ButtonPair(int p1, int p2, String b1Name, String b2Name, int maxVal, String buttonPairName) :
+ButtonPair::ButtonPair(int p1, int p2, String b1Name, String b2Name, String buttonPairName) :
 	_incButton(p1, b1Name), _decButton(p2, b2Name) {
 	
 	_p1 = p1;
 	_p2 = p2;
-	_maxVal = maxVal;
 	_buttonPairName = buttonPairName;
 }
 
+// minVal is the lowest possible value of the ButtonPair
 bool ButtonPair::check_lower_bound() {
-	return _val > 0;
+	return _val > _minVal;
 }
 
+// maxVal is the hight possible value of the ButtonPair
 bool ButtonPair::check_upper_bound() {
 	return _val < _maxVal;
 } 
@@ -31,8 +32,9 @@ int ButtonPair::decrement() {
 	return _val;
 }
 
-void ButtonPair::setVals(const int val, const int maxVal) {
+void ButtonPair::setVals(const int val, const int minVal, const int maxVal) {
 	_val = val;
+	_minVal = minVal;
 	_maxVal = maxVal;
 }
 

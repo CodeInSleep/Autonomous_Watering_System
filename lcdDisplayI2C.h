@@ -12,7 +12,7 @@ public:
 	// lcdDisplay params:
 	// int controlPins = [int rs, int en, int d4, int d5, int d6, int d7]
 	// int buttonPins = [int up, int down, int left, int right, int enter]
-	lcdDisplayI2C(int addr, int col, int row, int up, int down, int left, int right, int enter);
+	lcdDisplayI2C(int addr, int col, int row, int up, int down, int left, int right, int enter, int activationPin);
 	// ~lcdDisplay();
 	void update_line(int lineNum);
 	void move_tick(int toLine);
@@ -22,7 +22,6 @@ public:
 	// return what page the lcdDisplay is currently on
 	int get_page_num();
 	// void display();
-private:
 	// struct timeDigit {
 	// 	int _val;
 	// 	String _name;
@@ -37,6 +36,9 @@ private:
 	// 	int _val;
 	// 	String _name;
 	// };
+	
+	//static unsigned long get_millis(String timeString);
+
 private:
 	LiquidCrystal_I2C _lcd_i2c;
 
@@ -47,6 +49,7 @@ private:
 
 	String _period;
 	String _nextStartTime;
+	int _activationPin;
 
 	// can only change in main page
 	int _cursorRowPosition = 0;
@@ -60,7 +63,11 @@ private:
 	static const char* MENU_LINE1;
 	static const char* MENU_LINE2;
 	// const String _timeDigitNames[6] = {"period_hour", "period_minute", "period_second", "next_up_hour", "next_up_minute", "next_up_second"};
-	
+	unsigned long interval;
+	unsigned long nextStartTimeFromNow;
+	unsigned long previousMillis = 0;
+
+	bool inPeriod = false;
 
 
 	bool enter_pressed();
@@ -69,5 +76,10 @@ private:
 	void move_cursor(const int col, const int row);
 	String zero_pad(const int time_val);
 	void init_time_digits();
+	void update_time_settings();
+	void render_main_page();
+	void render_time_setting_page();
+
+	unsigned long get_millis(String timeString);
 };
 #endif

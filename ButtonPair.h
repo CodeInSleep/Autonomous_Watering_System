@@ -5,9 +5,9 @@
 
 class ButtonPair {
 public:
-	ButtonPair(int p1, int p2, String b1Name, String b2Name, int maxVal, String buttonPairName);
+	ButtonPair(int p1, int p2, String b1Name, String b2Name, String buttonPairName);
 	int button_pressed(bool op);
-	void setVals(const int val, const int maxVal);
+	void setVals(const int val, const int minVal, const int maxVal);
 private:
 	int increment();
 	int decrement();
@@ -17,6 +17,7 @@ private:
 	int _p1;
 	int _p2;
 	int _maxVal;
+	int _minVal;
 	String _buttonPairName;
 
 	Button _incButton;
