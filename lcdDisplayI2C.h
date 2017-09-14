@@ -14,8 +14,8 @@ public:
 	// int buttonPins = [int up, int down, int left, int right, int enter]
 	lcdDisplayI2C(int addr, int col, int row, int up, int down, int left, int right, int enter, int activationPin);
 	// ~lcdDisplay();
-	void update_line(int lineNum);
-	void move_tick(int toLine);
+	void update_time_setting_line();
+	void move_tick();
 
 	void show_main_page();
 	void show_time_setting_page();
@@ -47,8 +47,12 @@ private:
 	Button _enter;
 	int _pageNum;
 
-	String _period;
-	String _nextStartTime;
+	// String _bigInterval;
+	// String _nextStartTime;
+	// String _smallInterval;
+	// String _numberOfTimes;
+	// String _openValveDuration;
+	String _timeSettings[5];
 	int _activationPin;
 
 	// can only change in main page
@@ -63,11 +67,11 @@ private:
 	static const char* MENU_LINE1;
 	static const char* MENU_LINE2;
 	// const String _timeDigitNames[6] = {"period_hour", "period_minute", "period_second", "next_up_hour", "next_up_minute", "next_up_second"};
-	unsigned long interval;
-	unsigned long nextStartTimeFromNow;
+	unsigned long _timeSettingsInNum[5];
 	unsigned long previousMillis = 0;
 
 	bool inPeriod = false;
+	bool enabled = true;
 
 
 	bool enter_pressed();
@@ -77,7 +81,7 @@ private:
 	String zero_pad(const int time_val);
 	void init_time_digits();
 	void update_time_settings();
-	void render_main_page();
+	void render_main_page(bool reverse);
 	void render_time_setting_page();
 
 	unsigned long get_millis(String timeString);
