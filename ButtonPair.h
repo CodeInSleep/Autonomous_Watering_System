@@ -8,6 +8,7 @@ public:
 	ButtonPair(int p1, int p2, String b1Name, String b2Name, String buttonPairName);
 	int button_pressed(bool op);
 	void setVals(const int val, const int minVal, const int maxVal);
+	int getVal();
 private:
 	int increment();
 	int decrement();

@@ -19,6 +19,10 @@ bool ButtonPair::check_upper_bound() {
 	return _val < _maxVal;
 } 
 
+int ButtonPair::getVal() {
+	return _val;
+}
+
 // check if in range
 int ButtonPair::increment() {
 	if (check_upper_bound())

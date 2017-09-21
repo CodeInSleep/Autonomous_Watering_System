@@ -15,7 +15,7 @@ public:
 	lcdDisplayI2C(int addr, int col, int row, int up, int down, int left, int right, int enter, int activationPin);
 	// ~lcdDisplay();
 	void update_time_setting_line();
-	void move_tick();
+	void move_tick(int tickPos);
 
 	void show_main_page();
 	void show_time_setting_page();
@@ -75,15 +75,12 @@ private:
 
 
 	bool enter_pressed();
-	//String time_to_string(const int hour, const int min, const int sec);
-	//String time_to_string(timeDigit* time);
 	void move_cursor(const int col, const int row);
-	String zero_pad(const int time_val);
-	void init_time_digits();
 	void update_time_settings();
 	void render_main_page(bool reverse);
 	void render_time_setting_page();
 
-	unsigned long get_millis(String timeString);
+	static unsigned long get_millis(String timeString);
+	static bool ifStringBeGreater(String s1, String s2, unsigned int mult);
 };
 #endif

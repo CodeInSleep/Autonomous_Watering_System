@@ -11,16 +11,13 @@ static const int ASCII_NINE = ASCII_ZERO+9;
 
 String menuLines[6] = {"Set Big Int", "Nxt Strt Time", "Set Small Int", "# of Times", "Set Open Time", "DISABLE"};
 // default Settigs
-// constraints:
-// 1. big int >= # of Times * small int
-// 2. small int >= open time
-String defaultSettings[5] = {"00:00:30", "00:00:10", "00:00:05", "04", "00:00:02"};
+String defaultSettings[5] = {"00:05:00", "00:02:00", "00:01:00", "04", "00:00:10"};
 const int CURSOR_ROWMIN = 0;
 const int CURSOR_ROWMAX = 5;
 
 
 lcdDisplayI2C::lcdDisplayI2C(int addr, int col, int row, int up, int down, int left, int right, int enter, int activationPin) 
-  : _lcd_i2c(addr, col, row), _upDown(down, up, "down", "up", "upDown"), _leftRight(right, left, "left", "right", "leftRight"),
+  : _lcd_i2c(addr, col, row), _upDown(down, up, "down", "up", "upDown"), _leftRight(right, left, "right", "left", "leftRight"),
   _enter(enter, "enter") {
 
   _activationPin = activationPin;
@@ -31,7 +28,6 @@ lcdDisplayI2C::lcdDisplayI2C(int addr, int col, int row, int up, int down, int l
       _timeSettings[i] = defaultSettings[i];
   }
   _lcd_i2c.begin();
-  // init_time_digits();
   show_main_page();
 }
 
@@ -42,12 +38,11 @@ void lcdDisplayI2C::update_time_setting_line() {
 }
 
 // can only be called when on main page
-void lcdDisplayI2C::move_tick() {
-   for (int i = 0; i < 2; i++) {
+void lcdDisplayI2C::move_tick(int tickPos) {
+  for (int i = 0; i < 2; i++) {
     _lcd_i2c.setCursor(1, i);
-    if (_cursorRowPosition%2 == i) {
+    if (i == tickPos)
       _lcd_i2c.write(TICK);
-    }
     else
       _lcd_i2c.write(EMP);
   }
@@ -55,7 +50,7 @@ void lcdDisplayI2C::move_tick() {
 
 void lcdDisplayI2C::show_main_page() {
   render_main_page(false);
-  move_tick();
+  move_tick(0);
   update_time_settings();
 
   Serial.println("Showing main page");
@@ -80,7 +75,7 @@ void lcdDisplayI2C::show_main_page() {
           enabled = true;
         }
         render_main_page(true);
-        move_tick();
+        move_tick(1);
 
         continue;
       }
@@ -93,19 +88,23 @@ void lcdDisplayI2C::show_main_page() {
     // update cursor position
     if (newCursorRowPosition != _cursorRowPosition) {
       
-      Serial.print("newCursorRowPosition: ");
-      Serial.println(newCursorRowPosition);
-      int r = 1;
-      if (newCursorRowPosition > _cursorRowPosition)
-        r = 0;
-
+      // update the menu page when scrolling up and down
+      if (newCursorRowPosition > _cursorRowPosition) {
+        // scrolling downwards
+        _cursorRowPosition = newCursorRowPosition;
+        if (newCursorRowPosition % 2 == 0) {
+          render_main_page(false); 
+        }
+      } else if (newCursorRowPosition < _cursorRowPosition) {
+        _cursorRowPosition = newCursorRowPosition;
+        // scrolling upwards
+        if (newCursorRowPosition % 2 == 1) {
+          render_main_page(true);
+        }
+      }
       _cursorRowPosition = newCursorRowPosition;
 
-      if (_cursorRowPosition % 2 == r)
-        render_main_page(false);
-
-
-      move_tick();
+      move_tick(_cursorRowPosition%2);
     }
     
     unsigned long currentMillis = millis();
@@ -129,24 +128,25 @@ void lcdDisplayI2C::show_main_page() {
       unsigned long numOfTimes = _timeSettingsInNum[3];
       unsigned long duration = _timeSettingsInNum[4];
 
-      
-
       int counta = 0;
-      while (counta < numOfTimes) {
-        innerCurrentMillis = millis();
-        if ((unsigned long) (innerCurrentMillis - innerPreviousMillis) >= period) {
-            // activate valve for 5 seconds (TODO: make activation customizable)
-          Serial.println("TURN ON");
-          Serial.println(innerPreviousMillis);
-          Serial.println(innerCurrentMillis);
+      // only turn on when enabled
+      if (enabled) {
+        while (counta < numOfTimes) {
+          innerCurrentMillis = millis();
+          if ((unsigned long) (innerCurrentMillis - innerPreviousMillis) >= period) {
+              // activate valve for 5 seconds (TODO: make activation customizable)
+            Serial.println("TURN ON");
+            Serial.println(innerPreviousMillis);
+            Serial.println(innerCurrentMillis);
 
 
-          innerPreviousMillis = innerCurrentMillis;
-          digitalWrite(_activationPin, HIGH);
-          Serial.println(duration);
-          delay(2000);
-          digitalWrite(_activationPin, LOW);
-          counta++;
+            innerPreviousMillis = innerCurrentMillis;
+            digitalWrite(_activationPin, HIGH);
+            
+            delay(duration);
+            digitalWrite(_activationPin, LOW);
+            counta++;
+          }
         }
       }
       inPeriod = true;
@@ -168,7 +168,6 @@ void lcdDisplayI2C::show_time_setting_page() {
   int newLeftRightPos;
   int newUpDownVal;
   int COLON_OFFSETS = _cursorColPosition/2;
-
   // // set timeString to change
   char* timeString;
   timeString = &_timeSettings[_cursorRowPosition][0];
@@ -179,17 +178,18 @@ void lcdDisplayI2C::show_time_setting_page() {
   _upDown.setVals(currentTimeDigit, ASCII_ZERO, ASCII_NINE);
 
   while (true) {
+    newLeftRightPos = _leftRight.button_pressed(false);
+
+    int oldVal = _upDown.getVal();
+    newUpDownVal = _upDown.button_pressed(true);
+
     if (enter_pressed()) {
 
       inPeriod = false;
       // set previousMillis to the time exiting the time setting page
       previousMillis = millis();
       show_main_page();
-    }
-
-    newLeftRightPos = _leftRight.button_pressed(false);
-
-    if (newLeftRightPos != _cursorColPosition) {
+    } else if (newLeftRightPos != _cursorColPosition) {
       _cursorColPosition = newLeftRightPos;
 
       COLON_OFFSETS = _cursorColPosition/2;
@@ -215,22 +215,52 @@ void lcdDisplayI2C::show_time_setting_page() {
       _upDown.setVals(currentTimeDigit, ASCII_ZERO, newUpDownMaxVal);
       // continue to next iteration
       continue;
-    }
-
-    newUpDownVal = _upDown.button_pressed(true);
-    
-    // update timeDigits
-    if (newUpDownVal != currentTimeDigit) {
+    } else if (newUpDownVal != currentTimeDigit) {
+        // constraints:
+        // 1. big int >= # of Times * small int
+        // 2. small int >= open time
+        // 3. nxt strt time, # of times, open time all have minimum value of 1
       
       currentTimeDigit = newUpDownVal;
       // update time Strings
       timeString[_cursorColPosition+COLON_OFFSETS] = (char)newUpDownVal;
+
+      // String s2;
+      // int mult = 1;
+
+      // switch(_cursorRowPosition) {
+        
+      //   case 0:
+      //     s2 = _timeSettingsInNum[2];
+      //     mult = _timeSettingsInNum[3];
+      //     break;
+      //   case 2:
+      //     s2 = _timeSettingsInNum[4];
+      //   case 1:
+      //   case 3:
+      //   case 4:
+      //     // minimum value of 1 sec
+      //     s2 = "00:00:01";
+      //     break;
+      //   default:
+      //     break;
+      // }
+
+      // if (!lcdDisplayI2C::ifStringBeGreater(timeString, s2, mult))
+      //   timeString[_cursorColPosition+COLON_OFFSETS] = (char) oldVal;
       
       update_time_setting_line();
-      move_cursor(_cursorColPosition+OFFSET+COLON_OFFSETS, 1);
+      // reset cursor to the current digit
+      move_cursor(_cursorColPosition+COLON_OFFSETS+OFFSET, 1);
+      Serial.println(_cursorColPosition+COLON_OFFSETS+OFFSET);
     }
     delay(50);
   }   
+}
+
+// s1 >= s2*mult
+bool lcdDisplayI2C::ifStringBeGreater(String s1, String s2, unsigned int mult) {
+  return lcdDisplayI2C::get_millis(s1) >= lcdDisplayI2C::get_millis(s2)*mult;
 }
 
 void lcdDisplayI2C::update_time_settings() {
@@ -239,7 +269,7 @@ void lcdDisplayI2C::update_time_settings() {
         _timeSettingsInNum[i] = _timeSettings[i].toInt();
         continue;
       }
-      _timeSettingsInNum[i] = get_millis(_timeSettings[i]);
+      _timeSettingsInNum[i] = lcdDisplayI2C::get_millis(_timeSettings[i]);
   }
   // interval = get_millis(_bigInterval);
   // nextStartTimeFromNow = lcdDisplayI2C::get_millis(_nextStartTime);
@@ -253,6 +283,10 @@ unsigned long lcdDisplayI2C::get_millis(String timeString) {
 }
 
 void lcdDisplayI2C::render_main_page(bool reverse) {
+  // if reverse == false
+  // render lines _cursorRowPosition and _cursorRowPosition+1
+  // else
+  // render lines _cursorRowPosition-1 and _cursorRowPosition
   _lcd_i2c.noCursor();
   _lcd_i2c.noBlink();
   _lcd_i2c.clear();
@@ -294,11 +328,5 @@ bool lcdDisplayI2C::enter_pressed() {
 
 void lcdDisplayI2C::move_cursor(const int col, const int row) {
   _lcd_i2c.setCursor(col, row);
-}
-
-String lcdDisplayI2C::zero_pad(const int time_val) {
-  if (time_val < 10)
-    return "0" + String(time_val);
-  return String(time_val);
 }
 
